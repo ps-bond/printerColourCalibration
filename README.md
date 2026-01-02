@@ -1,7 +1,10 @@
-# Printer Calibration CLI
+# Printer Calibration
 
-This repository provides a small command-line interface to a printer
-calibration workflow implemented in the `printer_calibration` package.
+This repository provides a selection of utility modules for use in calibrating an inkjet printer.
+
+The rationale was that my Epson 7100 is printing with a significant blue shift (not Doppler related) and I wanted the colours to be more accurate, but without going to the trouble of using professional colour match equipment.
+
+I've been using a Color Muse 3 to read CIELAB values off printed swatches; I can then pass these into the scripts to calculate firstly gross colour balance (using the sliders for CMY in the Epson driver), then build an ICC profile.  It's crude, it's not as accurate as a pro setup but it's close enough for my needs.
 
 The CLI exposes a few convenient commands used during calibration and
 profile generation:
@@ -162,16 +165,16 @@ Workflow
  └─────────────┬──────────────┘
                │
                ▼
- ┌──────────────────────────────────────────────┐
- │ 4. Analyse & Adjust Sliders                  │
- │                                              │
+ ┌───────────────────────────────────────────────────────────────────┐
+ │ 4. Analyse & Adjust Sliders                                       │
+ │                                                                   │
  │ - Run: python -m printer_calibration.cli analyse measurements.csv │
- │ - Output:                                    │
- │   * Neutral bias                             │
- │   * ΔE per patch                             │
- │   * Suggested CMY adjustment                 │
- │ - Apply CMY adjustments in driver            │
- └─────────────┬────────────────────────────────┘
+ │ - Output:                                                         │
+ │   * Neutral bias                                                  │
+ │   * ΔE per patch                                                  │
+ │   * Suggested CMY adjustment                                      │
+ │ - Apply CMY adjustments in driver                                 │
+ └───────────────────────────────────────────────────────────────────┘
                │
                ▼
  ┌────────────────────────────┐
@@ -195,13 +198,13 @@ Workflow
  └─────────────┬────────────────┘
                │
                ▼
- ┌──────────────────────────────────────────────┐
- │ 7. Export ICC Profile                        │
- │                                              │
- │ - Run: python -m printer_calibration.cli export-icc          │
- │ - Output: custom_neutral_printer.icc         │
- │ - Apply ICC in all future prints             │
- └─────────────┬────────────────────────────────┘
+ ┌─────────────────────────────────────────────────────┐
+ │ 7. Export ICC Profile                               │
+ │                                                     │
+ │ - Run: python -m printer_calibration.cli export-icc │
+ │ - Output: custom_neutral_printer.icc                │
+ │ - Apply ICC in all future prints                    │
+ └─────────────┬───────────────────────────────────────┘
                │
                ▼
  ┌─────────────────────────────────┐
