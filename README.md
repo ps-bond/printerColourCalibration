@@ -1,5 +1,4 @@
 # Printer Calibration CLI
-# Printer Calibration CLI
 
 This repository provides a small command-line interface to a printer
 calibration workflow implemented in the `printer_calibration` package.
