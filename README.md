@@ -126,12 +126,8 @@ If any of these columns are missing the loader will raise a
 measurement tool (or be converted to the column names above before
 running the CLI).
 
-Contributing
-
-If you add features to the CLI or new commands, please update this
-README with examples and any new dependencies.
-
 Workflow
+--------
 
 ```text
  ┌────────────────────────────┐
