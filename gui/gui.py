@@ -19,9 +19,9 @@ try:
         QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout,
         QFormLayout, QGroupBox, QLabel, QLineEdit, QPushButton,
         QMessageBox, QFileDialog, QTextEdit, QHBoxLayout, QTableWidget,
-        QTableWidgetItem, QHeaderView, QComboBox
+        QTableWidgetItem, QHeaderView, QComboBox, QStyledItemDelegate
     )
-    from PyQt6.QtGui import QAction
+    from PyQt6.QtGui import QAction, QDoubleValidator
     from PyQt6.QtCore import Qt
 except ImportError:
     print("PyQt6 is not installed. Please install it using: pip install PyQt6")
@@ -34,6 +34,33 @@ except ImportError as e:
     print(f"Could not import 'printer_calibration' module: {e}")
     print("Please ensure you are running this from the project's root directory.")
     sys.exit(1)
+
+
+# The a* and b* channels in CIELAB are theoretically unbounded, but in practice
+# a range of -128 to 127 is used by many applications, including Photoshop.
+class LabValueDelegate(QStyledItemDelegate):
+    """A delegate for validating L*, a*, b* values in the table."""
+    def __init__(self, min_val, max_val, parent=None):
+        super().__init__(parent)
+        self.min_val = min_val
+        self.max_val = max_val
+
+    def createEditor(self, parent, option, index):
+        editor = QLineEdit(parent)
+        # Validator for float with 2 decimal places in the specified range.
+        validator = QDoubleValidator(self.min_val, self.max_val, 2, editor)
+        validator.setNotation(QDoubleValidator.Notation.StandardNotation)
+        editor.setValidator(validator)
+        return editor
+
+    def setEditorData(self, editor, index):
+        value = index.model().data(index, Qt.ItemDataRole.EditRole)
+        editor.setText(str(value))
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.text(), Qt.ItemDataRole.EditRole)
+
+
 
 
 class ChartsTab(QWidget):
@@ -101,6 +128,7 @@ class AnalysisTab(QWidget):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
+        self.controller = main_window.controller
         
         main_layout = QVBoxLayout(self)
 
@@ -121,6 +149,14 @@ class AnalysisTab(QWidget):
         self.table.setHorizontalHeaderLabels(["Patch", "L*", "a*", "b*"])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self.table.verticalHeader().setVisible(False)
+        
+        # --- Set delegates for validation ---
+        self.l_delegate = LabValueDelegate(0.0, 100.0, self)
+        self.ab_delegate = LabValueDelegate(-128.0, 127.0, self)
+        self.table.setItemDelegateForColumn(1, self.l_delegate)
+        self.table.setItemDelegateForColumn(2, self.ab_delegate)
+        self.table.setItemDelegateForColumn(3, self.ab_delegate)
+        
         main_layout.addWidget(self.table)
 
         # --- Action Buttons ---
@@ -140,6 +176,32 @@ class AnalysisTab(QWidget):
 
         self.populate_table()
 
+
+    def update_ui_for_phase(self):
+        """Adjusts the chart type selection based on the current calibration phase."""
+        phase = self.controller.get_current_phase()
+        
+        # Get the QStandardItemModel from the QComboBox
+        model = self.chart_type_combo.model()
+
+        if phase in [CalibrationPhase.PHASE_1_NEUTRAL_GREY, CalibrationPhase.PHASE_2_NEUTRAL_SLOPE, CalibrationPhase.PHASE_3_DRIVER_LOCK]:
+            # In greys analysis phases, only neutral chart is relevant
+            self.chart_type_combo.setCurrentText("Neutral")
+            model.item(0).setEnabled(True)   # Enable "Neutral"
+            model.item(1).setEnabled(False)  # Disable "Colour"
+        elif phase == CalibrationPhase.PHASE_4_COLOR_ANALYSIS:
+            # In colour analysis phase, only colour chart is relevant
+            self.chart_type_combo.setCurrentText("Colour")
+            model.item(0).setEnabled(False)  # Disable "Neutral"
+            model.item(1).setEnabled(True)   # Enable "Colour"
+        else:
+            # For other phases, enable both
+            model.item(0).setEnabled(True)
+            model.item(1).setEnabled(True)
+        
+        # Ensure the table is populated correctly after UI update
+        self.populate_table()
+
     def populate_table(self):
         """Fills the 'Patch' column with names based on the selected chart type."""
         chart_type = self.chart_type_combo.currentText()
@@ -149,7 +211,8 @@ class AnalysisTab(QWidget):
         for i, patch_info in enumerate(patches):
             name = patch_info[0]
             patch_item = QTableWidgetItem(name)
-            patch_item.setFlags(patch_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            # Make patch name non-editable and non-selectable for tabbing
+            patch_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
             self.table.setItem(i, 0, patch_item)
             for j in range(1, 4): # Clear L, a, b columns
                 self.table.setItem(i, j, QTableWidgetItem(""))
@@ -239,7 +302,7 @@ class AnalysisTab(QWidget):
         df = self.get_dataframe_from_table()
         if df is not None:
             try:
-                df_to_save = df[['patch', 'L', 'a', 'b']]
+                df_to_save = df[['patch', 'rgb', 'L', 'a', 'b']]
                 df_to_save.to_csv(filepath, index=False)
                 QMessageBox.information(self, "Success", f"Successfully saved measurements to {os.path.basename(filepath)}.")
             except Exception as e:
@@ -346,6 +409,7 @@ class MainWindow(QMainWindow):
         self._create_menus()
         self.set_export_tab_enabled(False)
         self.update_status_display()
+        self.analysis_tab.update_ui_for_phase()
 
     def process_dataframe(self, df):
         """The single point for processing a dataframe and updating the UI."""
@@ -362,11 +426,15 @@ class MainWindow(QMainWindow):
         self.phase_label.setText(phase.name.replace('_', ' ').title())
         self.action_label.setText(self.controller.get_next_action())
         self.set_export_tab_enabled(phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE])
+        self.analysis_tab.update_ui_for_phase()
         
         if phase == CalibrationPhase.PHASE_3_DRIVER_LOCK:
             self.controller.set_phase(CalibrationPhase.PHASE_4_COLOR_ANALYSIS)
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, self.update_status_display)
+        elif phase == CalibrationPhase.COMPLETE:
+            # Automatically switch to the Export Profile tab when calibration is complete
+            self.tab_widget.setCurrentIndex(2)
 
     def set_export_tab_enabled(self, enabled: bool):
         self.tab_widget.setTabEnabled(2, enabled)

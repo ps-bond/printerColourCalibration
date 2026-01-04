@@ -79,7 +79,7 @@ def get_reference_lab_values() -> dict:
     # The conversion assumes standard sRGB primaries, D65 illuminant, and 2-degree observer,
     # which is the standard for sRGB.
     lab_patches = {
-        name: colour.sRGB_to_Lab(rgb) for name, rgb in rgb_patches.items()
+        name: colour.XYZ_to_Lab(colour.sRGB_to_XYZ(rgb)) for name, rgb in rgb_patches.items()
     }
     return lab_patches
 

@@ -13,7 +13,7 @@ import warnings
 import pandas as pd
 
 # canonical required column names (note capital 'L')
-REQUIRED = {"patch", "rgb", "L", "a", "b"}
+CANONICAL_ANALYSIS_COLUMNS = {"patch", "L", "a", "b"}
 
 
 def _normalize_columns(columns):
@@ -22,7 +22,16 @@ def _normalize_columns(columns):
     The function matches columns case-insensitively and strips
     surrounding whitespace. For example ' l ' or 'L' -> 'L'.
     """
-    canon = {"patch": "patch", "rgb": "rgb", "l": "L", "a": "a", "b": "b"}
+    canon = {
+        "patch": "patch",
+        "label": "patch",  # Map 'label' to 'patch'
+        "l": "L",
+        "a_lab": "a",      # Map 'a_lab' to 'a'
+        "b_lab": "b",      # Map 'b_lab' to 'b'
+        "r": "r",          # Keep 'r' as 'r'
+        "g": "g",          # Keep 'g' as 'g'
+        "b": "b_rgb",      # Map 'b' from r,g,b to 'b_rgb' to avoid conflict with Lab 'b'
+    }
     rename = {}
     for col in columns:
         key = col.strip().lower()
@@ -66,10 +75,12 @@ def load_csv(path):
     if rename_map:
         df = df.rename(columns=rename_map)
 
-    # Verify required columns are present after normalization
-    missing = REQUIRED.difference(df.columns)
-    if missing:
-        raise ValueError(f"CSV must contain columns {REQUIRED}; missing: {missing}")
+    # Verify canonical Lab columns are present after normalization
+    # 'r', 'g', 'b_rgb' are not strictly required for analysis, but are passed through
+    missing_lab_cols = CANONICAL_ANALYSIS_COLUMNS.difference(df.columns)
+    if missing_lab_cols:
+        raise ValueError(f"CSV must contain core Lab columns {CANONICAL_ANALYSIS_COLUMNS}; missing: {missing_lab_cols}")
+
 
     # Coerce numeric Lab values to numbers where possible; be tolerant of
     # non-numeric garbage and drop rows that have no valid Lab data.

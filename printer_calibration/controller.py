@@ -33,7 +33,7 @@ class CalibrationController:
         # Load configs
         self.phase1_targets = config.Phase1Targets()
         self.phase2_targets = config.Phase2Targets()
-        self.phase4_targets = config.Phase4Targets()
+
         self.convergence_rules = config.Convergence()
         self.ink_steps = config.InkSteps()
 
@@ -175,7 +175,7 @@ class CalibrationController:
 
     def _process_phase4(self, df):
         """Processes the full colour chart analysis for Phase 4."""
-        passed, report = analysis.analyze_color_patches(df, self.phase4_targets)
+        passed, report = analysis.analyze_color_patches(df, config.Phase4Targets())
         
         if passed:
             self.phase = CalibrationPhase.PHASE_5_ICC_CONSTRUCTION

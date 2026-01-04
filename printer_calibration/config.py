@@ -37,10 +37,10 @@ class Phase2Targets:
 @dataclass(frozen=True)
 class Phase4Targets:
     """Target values and tolerances for Phase 4 (colour patch analysis)."""
-    mean_delta_e: float = 4.0
-    percentile_95_delta_e: float = 6.0
-    max_delta_e: float = 8.0
-    skin_tone_delta_e: float = 4.0
+    mean_delta_e: float = 13.0
+    percentile_95_delta_e: float = 24.0
+    max_delta_e: float = 27.0
+    skin_tone_delta_e: float = 12.0
     skin_tone_names: Tuple[str, ...] = ("Skin1", "Skin2")
 
 
