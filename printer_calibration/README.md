@@ -4,10 +4,13 @@ A collection of Python scripts for analyzing and adjusting printer color balance
 
 ## Modules
 
+These modules provide the core functionality for the calibration workflow and are used by both the command-line interface and the graphical user interface.
+
 *   `analysis.py`: Contains functions for analyzing color data and suggesting adjustments.
 *   `charts.py`: Used for generating visual charts or color patches.
 *   `cli.py`: Command-line interface for the printer calibration workflow.
 *   `config.py`: Configuration settings for the project, such as ink steps.
+*   `controller.py`: Manages the state machine of the calibration process, guiding the user through the different phases.
 *   `convergence.py`: Used for iterative processes to converge on an ideal color balance.
 *   `deltae.py`: Functions related to calculating Delta E values, a measure of color difference.
 *   `icc.py`: Utilities for working with ICC color profiles.

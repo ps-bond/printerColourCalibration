@@ -27,6 +27,10 @@ pip install -r requirements.txt
 Usage
 -----
 
+This project provides two interfaces: a command-line interface (CLI) and a graphical user interface (GUI).
+
+### Command-Line Interface (CLI)
+
 Run the CLI with Python from the repository root. The CLI is packaged as
 `printer_calibration.cli` and should be run using the module invocation so
 imports resolve correctly. Examples:
@@ -35,23 +39,6 @@ Generate a neutral chart:
 
 ```bash
 python -m printer_calibration.cli generate-chart --type neutral
-```
-
-Save charts as PDF
-------------------
-
-You can save charts as PDF either by using a `.pdf` filename or by
-passing an explicit format to the chart functions. Examples:
-
-```bash
-python -m printer_calibration.cli generate-chart --type neutral --output neutral.pdf
-```
-
-Or in Python:
-
-```py
-from printer_calibration import charts
-charts.generate_neutral_chart('neutral.pdf', format='PDF')
 ```
 
 Analyse a CSV of measured patches:
@@ -71,6 +58,38 @@ Export an ICC profile after convergence:
 ```bash
 python -m printer_calibration.cli export-icc
 ```
+
+For more details on the CLI commands, see the `printer_calibration/README.md` file.
+
+### Graphical User Interface (GUI)
+
+A GUI is available to guide you through the calibration workflow.
+
+**GUI Installation**
+
+The GUI requires `PyQt6`. Install it from the `gui` directory:
+
+```bash
+pip install -r gui/requirements.txt
+```
+
+**Running the GUI**
+
+Launch the GUI by running the `gui.py` module from the project root:
+
+```bash
+python -m gui.gui
+```
+
+The GUI provides the following features:
+
+- **Generate Charts**: Create and save printable PDF charts for neutral grey and colour patches.
+- **Analysis**: 
+  - Load measurement data from a CSV file or enter it manually into a table.
+  - Save your measurements to a CSV file.
+  - Process the measurements to advance through the calibration phases.
+- **Export Profile**: Once the calibration is complete, export the final ICC profile.
+- **Status Display**: A side panel shows the current calibration phase and guides you on the next action to take.
 
 Running tests
 -------------
