@@ -1,4 +1,3 @@
-import io
 import os
 import tempfile
 import unittest
@@ -15,7 +14,7 @@ class TestLoadCSV(unittest.TestCase):
         return path
 
     def test_load_valid_csv(self):
-        contents = """patch,rgb,L,a,b
+        contents = """patch,rgb,L,a,b_lab
 0,100,53.2,-0.5,1.2
 1,150,67.1,0.1,-0.9
 """
@@ -24,6 +23,8 @@ class TestLoadCSV(unittest.TestCase):
             df = load_csv(path)
             self.assertIn("patch", df.columns)
             self.assertIn("L", df.columns)
+            self.assertIn("a", df.columns)
+            self.assertIn("b", df.columns)
         finally:
             os.remove(path)
 

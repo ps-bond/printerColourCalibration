@@ -20,7 +20,7 @@ class TestCharts(unittest.TestCase):
         fd, path = tempfile.mkstemp(suffix=".png")
         os.close(fd)
         try:
-            generate_colour_chart(filename=path, page_size=(800, 1200), patch_size=100, margin=10)
+            generate_colour_chart(path=path)
             self.assertTrue(os.path.exists(path))
             self.assertGreater(os.path.getsize(path), 0)
         finally:

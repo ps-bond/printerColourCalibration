@@ -6,7 +6,7 @@ the analysis and workflow modules. They encapsulate tolerance targets
 and step sizes for suggested adjustments.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple
 
 

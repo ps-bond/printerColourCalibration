@@ -467,6 +467,32 @@ class MainWindow(QMainWindow):
         self.results_text.append("--- CALIBRATION RESET ---\n")
         self.update_status_display()
 
+    def save_profile(self):
+        filepath, _ = QFileDialog.getSaveFileName(self, "Save Calibration Profile", "", "Calibration Profile (*.cal);;All Files (*)")
+        if filepath:
+            try:
+                self.controller.save_state(filepath)
+                QMessageBox.information(self, "Success", f"Calibration profile saved to {os.path.basename(filepath)}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save calibration profile:\n{e}")
+
+    def load_profile(self):
+        filepath, _ = QFileDialog.getOpenFileName(self, "Load Calibration Profile", "", "Calibration Profile (*.cal);;All Files (*)")
+        if filepath:
+            try:
+                loaded_controller = CalibrationController.load_state(filepath)
+                self.controller = loaded_controller
+                self.results_text.append(f"\n--- PROFILE LOADED FROM {os.path.basename(filepath)} ---\n")
+                self.update_status_display()
+                # Ensure all tabs are updated with the new controller
+                self.analysis_tab.controller = self.controller
+                self.export_tab.controller = self.controller
+                self.analysis_tab.update_ui_for_phase()
+                self.tab_widget.setCurrentIndex(self.tab_widget.indexOf(self.analysis_tab)) # Switch to analysis tab after loading
+                
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to load calibration profile:\n{e}")
+
     def skip_to_phase(self, phase: CalibrationPhase):
         self.controller.set_phase(phase)
         self.results_text.append(f"\n--- SKIPPED TO {phase.name} ---\n")

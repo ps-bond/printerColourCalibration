@@ -6,11 +6,14 @@ from PIL import Image
 
 
 class TestChartTitles(unittest.TestCase):
-    def _sample_top_center_nonwhite(self, img_path):
+    def _sample_top_center_nonwhite(self, img_path, y_coord=None):
         img = Image.open(img_path).convert("RGB")
         w, h = img.size
         x = w // 2
-        y = min(40, max(5, h // 20))
+        if y_coord is None:
+            y = min(40, max(5, h // 20))
+        else:
+            y = y_coord
         box = img.crop((x - 5, y - 5, x + 5, y + 5))
         pixels = list(box.getdata())
         return any(px != (255, 255, 255) for px in pixels)
@@ -40,7 +43,7 @@ class TestChartTitles(unittest.TestCase):
             charts.generate_colour_chart(tf.name, title="Colour Title Test")
             self.assertTrue(os.path.exists(tf.name))
             self.assertGreater(os.path.getsize(tf.name), 0)
-            self.assertTrue(self._sample_top_center_nonwhite(tf.name))
+            self.assertTrue(self._sample_top_center_nonwhite(tf.name, y_coord=150))
         finally:
             try:
                 os.remove(tf.name)

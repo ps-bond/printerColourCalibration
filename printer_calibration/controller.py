@@ -232,3 +232,17 @@ class CalibrationController:
     def reset(self):
         """Resets the controller to its initial state."""
         self.set_phase(CalibrationPhase.PRECONDITION)
+
+    def save_state(self, filepath: str):
+        """Saves the current state of the controller to a file using pickle."""
+        import pickle
+        with open(filepath, 'wb') as f:
+            pickle.dump(self, f)
+
+    @staticmethod
+    def load_state(filepath: str) -> "CalibrationController":
+        """Loads a controller state from a file using pickle."""
+        import pickle
+        with open(filepath, 'rb') as f:
+            controller = pickle.load(f)
+        return controller

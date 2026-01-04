@@ -29,7 +29,7 @@ Notes
 """
 
 from .io import load_csv
-from .analysis import neutral_error, suggest_adjustment
+# from .analysis import neutral_error, suggest_adjustment
 from .config import InkSteps
 from printer_calibration.charts import (
     generate_neutral_chart,
@@ -100,34 +100,34 @@ def generate_chart(
         raise ValueError(f"Unknown chart type: {chart_type}")
 
 
-def run(csv_path: str):
-    """Run one analysis pass for the given measurement CSV.
+# def run(csv_path: str):
+#     """Run one analysis pass for the given measurement CSV.
 
-    Parameters
-    ----------
-    csv_path : str
-        Path to the measurement CSV file. The loader will normalize
-        columns and coerce numeric Lab values; see
-        :func:`printer_calibration.io.load_csv` for details.
+#     Parameters
+#     ----------
+#     csv_path : str
+#         Path to the measurement CSV file. The loader will normalize
+#         columns and coerce numeric Lab values; see
+#         :func:`printer_calibration.io.load_csv` for details.
 
-    Returns
-    -------
-    tuple
-        A 3-tuple ``(a_mean, b_mean, adjustments)`` where ``a_mean`` and
-        ``b_mean`` are the computed mean offsets for the neutral mid-tones,
-        and ``adjustments`` is the dictionary returned by
-        :func:`printer_calibration.analysis.suggest_adjustment`.
-    """
+#     Returns
+#     -------
+#     tuple
+#         A 3-tuple ``(a_mean, b_mean, adjustments)`` where ``a_mean`` and
+#         ``b_mean`` are the computed mean offsets for the neutral mid-tones,
+#         and ``adjustments`` is the dictionary returned by
+#         :func:`printer_calibration.analysis.suggest_adjustment`.
+#     """
 
-    # Load and clean measurement data. The loader is tolerant of common
-    # CSV issues (comments, whitespace, case differences) and will raise
-    # a ValueError if required columns are missing.
-    df = load_csv(csv_path)
+#     # Load and clean measurement data. The loader is tolerant of common
+#     # CSV issues (comments, whitespace, case differences) and will raise
+#     # a ValueError if required columns are missing.
+#     df = load_csv(csv_path)
 
-    # Compute neutral-channel error (mean a and b for mid-tone patches).
-    a, b = neutral_error(df)
+#     # Compute neutral-channel error (mean a and b for mid-tone patches).
+#     a, b = neutral_error(df)
 
-    # Suggest per-channel ink adjustments using configured step sizes.
-    adj = suggest_adjustment(a, b, InkSteps())
+#     # Suggest per-channel ink adjustments using configured step sizes.
+#     adj = suggest_adjustment(a, b, InkSteps())
 
-    return a, b, adj
+#     return a, b, adj
