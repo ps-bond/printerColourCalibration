@@ -6,27 +6,48 @@ the analysis and workflow modules. They encapsulate tolerance targets
 and step sizes for suggested adjustments.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Tuple
 
 
 @dataclass(frozen=True)
-class Targets:
-    """Target values and tolerances for neutral axis and deltaE.
+class Phase1Targets:
+    """Target values and tolerances for Phase 1 (mid-grey anchor).
 
-    Attributes
-    ----------
-    a_neutral, b_neutral : float
-        Desired neutral a/b values (typically ~0.0).
-    a_tol, b_tol : float
-        Acceptable tolerances for a and b.
-    delta_e_tol : float
-        Acceptable Delta E threshold for convergence.
+    Corresponds to patch RGB(100, 100, 100).
     """
-    a_neutral: float = 0.0
-    b_neutral: float = 0.0
-    a_tol: float = 1.5
-    b_tol: float = 2.0
-    delta_e_tol: float = 4.0
+    patch_name: str = "RGB100"
+    L_range: Tuple[float, float] = (36.5, 39.5)
+    a_range: Tuple[float, float] = (-2.0, 2.0)
+    b_range: Tuple[float, float] = (-4.0, 4.0)
+
+
+@dataclass(frozen=True)
+class Phase2Targets:
+    """Target values and tolerances for Phase 2 (neutral slope validation)."""
+    rgb150_patch_name: str = "RGB150"
+    rgb150_a_tol: float = 2.0
+    rgb150_b_tol: float = 4.0
+
+    rgb200_patch_name: str = "RGB200"
+    rgb200_a_tol: float = 2.0
+    rgb200_b_tol: float = 3.5
+
+
+@dataclass(frozen=True)
+class Phase4Targets:
+    """Target values and tolerances for Phase 4 (colour patch analysis)."""
+    mean_delta_e: float = 4.0
+    percentile_95_delta_e: float = 6.0
+    max_delta_e: float = 8.0
+    skin_tone_delta_e: float = 4.0
+    skin_tone_names: Tuple[str, ...] = ("Skin1", "Skin2")
+
+
+@dataclass(frozen=True)
+class Convergence:
+    """Stopping criteria for iterative adjustments."""
+    min_abs_change: float = 0.5
 
 
 @dataclass(frozen=True)
@@ -36,6 +57,14 @@ class InkSteps:
     fine: int = 1
 
 
+# Patches used for neutral calibration phases 1 and 2.
+NEUTRAL_PATCHES = [
+    ("RGB100", 100, 100, 100),
+    ("RGB150", 150, 150, 150),
+    ("RGB200", 200, 200, 200),
+]
+
+# Patches used for full colour analysis in phase 4.
 COLOUR_PATCHES = [
     # Neutrals
     ("N0", 0, 0, 0),
