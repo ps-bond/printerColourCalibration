@@ -441,11 +441,29 @@ class MainWindow(QMainWindow):
 
     def _create_menus(self):
         menu_bar = self.menuBar()
+
+        # File Menu
+        file_menu = menu_bar.addMenu("&File")
+        save_action = QAction("&Save Calibration", self)
+        save_action.triggered.connect(self.save_profile)
+        file_menu.addAction(save_action)
+
+        load_action = QAction("&Load Calibration", self)
+        load_action.triggered.connect(self.load_profile)
+        file_menu.addAction(load_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction("&Exit", self)
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+
+        self._create_advanced_menu()
+
         help_menu = menu_bar.addMenu("&Help")
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
-        self._create_advanced_menu()
 
     def _create_advanced_menu(self):
         advanced_menu = self.menuBar().addMenu("&Advanced")

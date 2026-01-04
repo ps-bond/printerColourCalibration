@@ -104,7 +104,9 @@ def generate_neutral_chart(path, dpi=300, title=None, format=None):
     grid_width = cols * pw + (cols - 1) * gap
     x_origin = (width - grid_width) // 2
 
-    values = [int(i * 255 / 27) for i in range(28)]
+    values = sorted(
+        list(set([0, 5, 100, 150, 200, 255] + list(range(0, 256, 10))))
+    )
 
     for i, v in enumerate(values):
         r, c = divmod(i, cols)
