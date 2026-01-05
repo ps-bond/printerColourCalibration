@@ -20,6 +20,11 @@ class CalibrationPhase(Enum):
     COMPLETE = auto()
     ERROR = auto() # Added error state
 
+    def __str__(self):
+        if self == CalibrationPhase.PHASE_5_ICC_CONSTRUCTION:
+            return "Phase 5 ICC Construction"
+        return self.name.replace('_', ' ').title()
+
 
 class CalibrationController:
     """Manages the state and flow of the printer calibration process."""

@@ -89,6 +89,7 @@ The GUI provides the following features:
   - Save your measurements to a CSV file.
   - Process the measurements to advance through the calibration phases.
 - **Export Profile**: Once the calibration is complete, export the final ICC profile.
+- **Save/Load Progress**: Use the `File` menu to save the entire calibration state to a `.cal` file at any point, and load it back later to resume your work.
 - **Status Display**: A side panel shows the current calibration phase and guides you on the next action to take.
 
 Running tests

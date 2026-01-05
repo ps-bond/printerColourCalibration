@@ -129,19 +129,9 @@ class AnalysisTab(QWidget):
         super().__init__()
         self.main_window = main_window
         self.controller = main_window.controller
+        self.current_chart_type = None
         
         main_layout = QVBoxLayout(self)
-
-        # --- Chart Type Selection ---
-        controls_group = QGroupBox("Chart Type")
-        controls_layout = QHBoxLayout()
-        self.chart_type_combo = QComboBox()
-        self.chart_type_combo.addItems(["Neutral", "Colour"])
-        self.chart_type_combo.currentTextChanged.connect(self.populate_table)
-        controls_layout.addWidget(QLabel("Select chart to pre-fill patch names:"))
-        controls_layout.addWidget(self.chart_type_combo)
-        controls_group.setLayout(controls_layout)
-        main_layout.addWidget(controls_group)
 
         # --- Data Table ---
         self.table = QTableWidget()
@@ -176,35 +166,27 @@ class AnalysisTab(QWidget):
 
         self.populate_table()
 
+    def get_chart_type(self):
+        """Determines the chart type based on the current calibration phase."""
+        phase = self.controller.get_current_phase()
+        if phase in [CalibrationPhase.PHASE_4_COLOR_ANALYSIS, CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE]:
+            return "Colour"
+        return "Neutral"
 
     def update_ui_for_phase(self):
         """Adjusts the chart type selection based on the current calibration phase."""
-        phase = self.controller.get_current_phase()
-        
-        # Get the QStandardItemModel from the QComboBox
-        model = self.chart_type_combo.model()
-
-        if phase in [CalibrationPhase.PHASE_1_NEUTRAL_GREY, CalibrationPhase.PHASE_2_NEUTRAL_SLOPE, CalibrationPhase.PHASE_3_DRIVER_LOCK]:
-            # In greys analysis phases, only neutral chart is relevant
-            self.chart_type_combo.setCurrentText("Neutral")
-            model.item(0).setEnabled(True)   # Enable "Neutral"
-            model.item(1).setEnabled(False)  # Disable "Colour"
-        elif phase == CalibrationPhase.PHASE_4_COLOR_ANALYSIS:
-            # In colour analysis phase, only colour chart is relevant
-            self.chart_type_combo.setCurrentText("Colour")
-            model.item(0).setEnabled(False)  # Disable "Neutral"
-            model.item(1).setEnabled(True)   # Enable "Colour"
-        else:
-            # For other phases, enable both
-            model.item(0).setEnabled(True)
-            model.item(1).setEnabled(True)
-        
         # Ensure the table is populated correctly after UI update
         self.populate_table()
 
     def populate_table(self):
         """Fills the 'Patch' column with names based on the selected chart type."""
-        chart_type = self.chart_type_combo.currentText()
+        chart_type = self.get_chart_type()
+        
+        # If the chart type hasn't changed, do not clear the table data
+        if self.current_chart_type == chart_type:
+            return
+        self.current_chart_type = chart_type
+
         patches = config.NEUTRAL_PATCHES if chart_type == "Neutral" else config.COLOUR_PATCHES
         
         self.table.setRowCount(len(patches))
@@ -261,7 +243,7 @@ class AnalysisTab(QWidget):
             loaded_df = io.load_csv(filepath)
             
             # --- Validation ---
-            chart_type = self.chart_type_combo.currentText()
+            chart_type = self.get_chart_type()
             expected_patches_list = config.NEUTRAL_PATCHES if chart_type == "Neutral" else config.COLOUR_PATCHES
             expected_patch_names = {p[0] for p in expected_patches_list}
             loaded_patch_names = set(loaded_df['patch'].astype(str))
@@ -276,6 +258,7 @@ class AnalysisTab(QWidget):
                 QMessageBox.information(self, "Extra Patches", f"The loaded file contains extra patches not defined for a '{chart_type}' chart:\n\n" + "\n".join(sorted(extra_patches)))
 
             # --- Populate Table ---
+            self.current_chart_type = None  # Force table refresh
             self.populate_table() # Reset table to expected structure
             
             data_dict = {str(row['patch']): (row['L'], row['a'], row['b']) for _, row in loaded_df.iterrows()}
@@ -317,7 +300,7 @@ class ExportTab(QWidget):
         self.controller = controller
         self.main_window = main_window
 
-        main_layout = QVBoxLayout()
+        main_layout = QVBoxLayout(self)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         export_group = QGroupBox("Export ICC Profile")
@@ -330,10 +313,10 @@ class ExportTab(QWidget):
         file_path_layout = QHBoxLayout()
         self.file_path_input = QLineEdit()
         self.file_path_input.setPlaceholderText("Select a location to save the ICC profile...")
-        save_as_button = QPushButton("Save As...")
-        save_as_button.clicked.connect(self.browse_save_location)
+        self.save_as_button = QPushButton("Save As...")
+        self.save_as_button.clicked.connect(self.browse_save_location)
         file_path_layout.addWidget(self.file_path_input)
-        file_path_layout.addWidget(save_as_button)
+        file_path_layout.addWidget(self.save_as_button)
         export_layout.addLayout(file_path_layout)
         
         self.export_button = QPushButton("Export ICC Profile")
@@ -342,6 +325,23 @@ class ExportTab(QWidget):
 
         export_group.setLayout(export_layout)
         main_layout.addWidget(export_group)
+        
+        # Initialize state
+        self.update_ui_state(self.controller.get_current_phase())
+
+    def update_ui_state(self, phase: CalibrationPhase):
+        """Updates the enabled state of the export controls based on the phase."""
+        is_ready = phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE]
+        self.export_button.setEnabled(is_ready)
+        self.file_path_input.setEnabled(is_ready)
+        self.save_as_button.setEnabled(is_ready)
+        
+        if is_ready:
+            self.info_label.setText("Calibration data ready. You can now export the ICC profile.")
+            if not self.file_path_input.text():
+                self.file_path_input.setText("printer_profile.icc")
+        else:
+            self.info_label.setText("Please complete the calibration analysis (Phase 4) before exporting.")
 
     def browse_save_location(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Save ICC Profile", "", "ICC Profile (*.icc);;All Files (*)")
@@ -354,9 +354,12 @@ class ExportTab(QWidget):
             QMessageBox.warning(self, "No Filename", "Please specify a filename for the ICC profile.")
             return
         
-        message = self.controller.export_icc(filename)
-        QMessageBox.information(self, "Export Status", message)
-        self.main_window.update_status_display()
+        try:
+            message = self.controller.export_icc(filename)
+            QMessageBox.information(self, "Export Status", message)
+            self.main_window.update_status_display()
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", f"Failed to export ICC profile:\n{e}")
 
 
 class MainWindow(QMainWindow):
@@ -407,7 +410,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(status_results_widget, 1)
 
         self._create_menus()
-        self.set_export_tab_enabled(False)
         self.update_status_display()
         self.analysis_tab.update_ui_for_phase()
 
@@ -423,21 +425,19 @@ class MainWindow(QMainWindow):
 
     def update_status_display(self):
         phase = self.controller.get_current_phase()
-        self.phase_label.setText(phase.name.replace('_', ' ').title())
+        self.phase_label.setText(str(phase))
         self.action_label.setText(self.controller.get_next_action())
-        self.set_export_tab_enabled(phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE])
+        self.tab_widget.setTabEnabled(2, True)
+        self.export_tab.update_ui_state(phase)
         self.analysis_tab.update_ui_for_phase()
         
         if phase == CalibrationPhase.PHASE_3_DRIVER_LOCK:
             self.controller.set_phase(CalibrationPhase.PHASE_4_COLOR_ANALYSIS)
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, self.update_status_display)
-        elif phase == CalibrationPhase.COMPLETE:
-            # Automatically switch to the Export Profile tab when calibration is complete
+        elif phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE]:
+            # Automatically switch to the Export Profile tab when ready to export
             self.tab_widget.setCurrentIndex(2)
-
-    def set_export_tab_enabled(self, enabled: bool):
-        self.tab_widget.setTabEnabled(2, enabled)
 
     def _create_menus(self):
         menu_bar = self.menuBar()
@@ -475,7 +475,7 @@ class MainWindow(QMainWindow):
         skip_menu = advanced_menu.addMenu("Skip to Phase...")
         for phase in CalibrationPhase:
             if phase not in [CalibrationPhase.COMPLETE, CalibrationPhase.ERROR]:
-                action = QAction(phase.name.replace('_', ' ').title(), self)
+                action = QAction(str(phase), self)
                 action.triggered.connect(partial(self.skip_to_phase, phase))
                 skip_menu.addAction(action)
 
@@ -483,6 +483,7 @@ class MainWindow(QMainWindow):
         self.controller.reset()
         self.results_text.clear()
         self.results_text.append("--- CALIBRATION RESET ---\n")
+        self.analysis_tab.current_chart_type = None  # Force table clear
         self.update_status_display()
 
     def save_profile(self):
