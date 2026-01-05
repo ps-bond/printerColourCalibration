@@ -18,7 +18,7 @@ try:
     from PyQt6.QtWidgets import (
         QApplication, QMainWindow, QTabWidget, QWidget, QVBoxLayout,
         QFormLayout, QGroupBox, QLabel, QLineEdit, QPushButton,
-        QMessageBox, QFileDialog, QTextEdit, QHBoxLayout, QTableWidget,
+        QMessageBox, QFileDialog, QTextEdit, QHBoxLayout, QTableWidget, QDialog,
         QTableWidgetItem, QHeaderView, QComboBox, QStyledItemDelegate
     )
     from PyQt6.QtGui import QAction, QDoubleValidator
@@ -461,6 +461,10 @@ class MainWindow(QMainWindow):
         self._create_advanced_menu()
 
         help_menu = menu_bar.addMenu("&Help")
+        instructions_action = QAction("&Instructions", self)
+        instructions_action.triggered.connect(self.show_instructions_dialog)
+        help_menu.addAction(instructions_action)
+
         about_action = QAction("&About", self)
         about_action.triggered.connect(self.show_about_dialog)
         help_menu.addAction(about_action)
@@ -517,6 +521,122 @@ class MainWindow(QMainWindow):
         self.results_text.append(f"\n--- SKIPPED TO {phase.name} ---\n")
         self.update_status_display()
 
+    def show_instructions_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Calibration Instructions")
+        dialog.resize(800, 600)
+        
+        layout = QVBoxLayout(dialog)
+        
+        text_edit = QTextEdit()
+        text_edit.setReadOnly(True)
+        text_edit.setStyleSheet("font-size: 12pt;")
+        text_edit.setHtml(
+            """<p><b>Printer Calibration & ICC Profiling Workflow</b></p>
+            <p>
+            This process calibrates your printer, ink, paper, and driver settings as a single fixed system,
+            then builds an ICC profile to correct the remaining colour error.
+            Do not skip steps or change settings mid-process.
+            </p>
+
+            <ol>
+            <li>
+            <b>Stage 0 — Preparation (Required)</b>
+            <ul>
+            <li>Select the correct printer, paper type, and print quality in the driver.</li>
+            <li>Create and select a <b>named driver preset</b> containing all current settings.</li>
+            <li>Disable any automatic enhancements (auto colour, vivid mode, sharpening, etc.).</li>
+            <li>Ensure the printer has been idle for at least 10 minutes.</li>
+            <li>Ensure prints will be allowed to dry for <b>at least 2 hours</b> (overnight preferred).</li>
+            </ul>
+            <i>All calibration depends on the driver preset remaining unchanged for the entire process.</i>
+            </li>
+            <br />
+            <li>
+            <b>Stage 1 — Print Neutral Tone Test Chart</b>
+            <ul>
+            <li>Print the neutral grey test chart using the selected driver preset.</li>
+            <li>Do not apply any ICC profile at this stage.</li>
+            <li>Allow the print to dry fully before measurement.</li>
+            </ul>
+            <i>This chart is used to stabilise the printer’s neutral behaviour.</i>
+            </li>
+            <br />
+            <li>
+            <b>Stage 2 — Mid-Grey Neutral Anchor (RGB100)</b>
+            <ul>
+            <li>Measure the RGB100 grey patch using your colour measurement device.</li>
+            <li>Adjust the driver CMY sliders to reduce colour cast in this patch.</li>
+            <li>Target values (approximate):
+              <ul>
+                <li>L* ≈ 38 (±2)</li>
+                <li>a* within ±2</li>
+                <li>b* within ±4</li>
+              </ul>
+            </li>
+            <li>Reprint the chart and re-measure after each adjustment.</li>
+            <li>Stop adjusting when changes no longer meaningfully reduce error.</li>
+            </ul>
+            <i>This is a coarse correction only. Do not chase perfection.</i>
+            </li>
+            <br />
+            <li>
+            <b>Stage 3 — Neutral Linearity Validation (RGB150, RGB200)</b>
+            <ul>
+            <li>Measure additional neutral patches (RGB150 and RGB200).</li>
+            <li>Verify that:
+              <ul>
+                <li>Colour error decreases toward highlights</li>
+                <li>No strong colour cast appears in lighter greys</li>
+              </ul>
+            </li>
+            <li>If highlights worsen while mid-grey improves, stop adjusting the driver.</li>
+            <li>Once acceptable, <b>freeze the driver settings</b>.</li>
+            </ul>
+            <i>From this point onward, driver sliders must not be changed.</i>
+            </li>
+            <br />
+            <li>
+            <b>Stage 4 — Print and Measure Colour Chart</b>
+            <ul>
+            <li>Print the full colour test chart using the frozen driver preset.</li>
+            <li>Ensure colour management is disabled for printing the chart.</li>
+            <li>Allow the print to dry fully.</li>
+            <li>Measure all colour patches in the specified order.</li>
+            </ul>
+            <i>This data characterises the printer’s full colour behaviour.</i>
+            </li>
+            <br />
+            <li>
+            <b>Stage 5 — ICC Profile Generation</b>
+            <ul>
+            <li>Process the measured colour data.</li>
+            <li>Generate an ICC profile that corrects remaining colour and tone errors.</li>
+            <li>Save the profile with a name matching the driver preset.</li>
+            </ul>
+            <i>The ICC profile assumes the driver preset remains unchanged.</i>
+            </li>
+            <br />
+            <li>
+            <b>Stage 6 — Validation (Strongly Recommended)</b>
+            <ul>
+            <li>Print a validation chart using the new ICC profile.</li>
+            <li>Measure the patches and verify ΔE values are within acceptable limits.</li>
+            <li>Confirm neutral greys are visually neutral.</li>
+            </ul>
+            <i>If validation fails, the ICC profile should not be used.</i>
+            </li>
+            </ol>
+            <br />
+            <p>
+            <b>Important:</b> If you change paper, ink, print quality, or driver sliders,
+            you must repeat the entire calibration process and generate a new ICC profile.
+            </p>"""
+        )
+        layout.addWidget(text_edit)
+
+        dialog.exec()
+
     def show_about_dialog(self):
         QMessageBox.about(
             self,
@@ -525,7 +645,7 @@ class MainWindow(QMainWindow):
             <p>A tool to help calibrate printer colour balance and generate an ICC profile.</p>
             <p>This application guides you through measuring printed charts and suggests
             adjustments to your printer's driver settings to achieve more accurate
-            colour reproduction, even without professional equipment.</p>"""
+            colour reproduction.</p>"""
         )
 
 def cli():
