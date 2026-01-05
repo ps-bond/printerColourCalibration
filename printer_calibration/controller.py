@@ -17,6 +17,7 @@ class CalibrationPhase(Enum):
     PHASE_3_DRIVER_LOCK = auto()
     PHASE_4_COLOR_ANALYSIS = auto()
     PHASE_5_ICC_CONSTRUCTION = auto()
+    PHASE_6_VALIDATION = auto()
     COMPLETE = auto()
     ERROR = auto() # Added error state
 
@@ -63,6 +64,8 @@ class CalibrationController:
                 "Analyzing full colour chart. This checks if the printer is within tolerance for ICC profiling.",
             CalibrationPhase.PHASE_5_ICC_CONSTRUCTION:
                 "Printer is within tolerance. Go to the 'Export Profile' tab to save the ICC profile.",
+            CalibrationPhase.PHASE_6_VALIDATION:
+                "Profile exported. Now print the colour chart WITH the profile applied, measure it, and process here to validate.",
             CalibrationPhase.COMPLETE:
                 "Calibration is complete! ICC Profile has been generated.",
             CalibrationPhase.ERROR:
@@ -83,6 +86,8 @@ class CalibrationController:
             return self._process_phase2(df)
         elif self.phase == CalibrationPhase.PHASE_4_COLOR_ANALYSIS:
             return self._process_phase4(df)
+        elif self.phase == CalibrationPhase.PHASE_6_VALIDATION:
+            return self._process_phase6(df)
         elif self.phase in [CalibrationPhase.PHASE_3_DRIVER_LOCK, CalibrationPhase.COMPLETE, CalibrationPhase.PHASE_5_ICC_CONSTRUCTION]:
             self.last_error_message = "Driver adjustments are locked. No further measurements can be processed for tuning."
             return self.last_error_message
@@ -191,9 +196,23 @@ class CalibrationController:
             
         return report
 
+    def _process_phase6(self, df):
+        """Processes the validation measurements."""
+        # Reuse Phase 4 analysis logic/targets for validation
+        passed, report = analysis.analyze_color_patches(df, config.Phase4Targets())
+        
+        if passed:
+            self.phase = CalibrationPhase.COMPLETE
+            report = "VALIDATION SUCCESSFUL\n" + report
+        else:
+            self.phase = CalibrationPhase.ERROR
+            self.last_error_message = "Validation failed. Measurements are outside target tolerances."
+            
+        return report
+
     def export_icc(self, filename: str) -> str:
         """Exports the ICC profile if in the correct phase."""
-        if self.phase != CalibrationPhase.PHASE_5_ICC_CONSTRUCTION:
+        if self.phase not in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.PHASE_6_VALIDATION, CalibrationPhase.COMPLETE]:
             return "Not in the correct phase to export an ICC profile."
         
         if self.last_measurements_df is None:
@@ -207,7 +226,7 @@ class CalibrationController:
         )
 
         if success:
-            self.phase = CalibrationPhase.COMPLETE
+            self.phase = CalibrationPhase.PHASE_6_VALIDATION
         
         return message
 

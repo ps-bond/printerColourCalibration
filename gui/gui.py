@@ -169,7 +169,7 @@ class AnalysisTab(QWidget):
     def get_chart_type(self):
         """Determines the chart type based on the current calibration phase."""
         phase = self.controller.get_current_phase()
-        if phase in [CalibrationPhase.PHASE_4_COLOR_ANALYSIS, CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE]:
+        if phase in [CalibrationPhase.PHASE_4_COLOR_ANALYSIS, CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.PHASE_6_VALIDATION, CalibrationPhase.COMPLETE]:
             return "Colour"
         return "Neutral"
 
@@ -331,7 +331,7 @@ class ExportTab(QWidget):
 
     def update_ui_state(self, phase: CalibrationPhase):
         """Updates the enabled state of the export controls based on the phase."""
-        is_ready = phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE]
+        is_ready = phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.PHASE_6_VALIDATION, CalibrationPhase.COMPLETE]
         self.export_button.setEnabled(is_ready)
         self.file_path_input.setEnabled(is_ready)
         self.save_as_button.setEnabled(is_ready)
@@ -435,9 +435,12 @@ class MainWindow(QMainWindow):
             self.controller.set_phase(CalibrationPhase.PHASE_4_COLOR_ANALYSIS)
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, self.update_status_display)
-        elif phase in [CalibrationPhase.PHASE_5_ICC_CONSTRUCTION, CalibrationPhase.COMPLETE]:
+        elif phase == CalibrationPhase.PHASE_5_ICC_CONSTRUCTION:
             # Automatically switch to the Export Profile tab when ready to export
             self.tab_widget.setCurrentIndex(2)
+        elif phase == CalibrationPhase.PHASE_6_VALIDATION:
+            # Switch back to Analysis tab for validation measurements
+            self.tab_widget.setCurrentIndex(1)
 
     def _create_menus(self):
         menu_bar = self.menuBar()
@@ -627,14 +630,14 @@ class MainWindow(QMainWindow):
             <i>If validation fails, the ICC profile should not be used.</i>
             </li>
             </ol>
-            <br />
+
             <p>
             <b>Important:</b> If you change paper, ink, print quality, or driver sliders,
             you must repeat the entire calibration process and generate a new ICC profile.
             </p>"""
         )
         layout.addWidget(text_edit)
-
+        
         dialog.exec()
 
     def show_about_dialog(self):
